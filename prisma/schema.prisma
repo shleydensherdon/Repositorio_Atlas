@@ -1,0 +1,203 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("ADMIN") // ADMIN, MANAGER, VIEWER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  orderIndex  Int       @default(0)
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Brand {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  logoUrl     String?
+  description String?
+  website     String?
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id                 String         @id @default(cuid())
+  name               String
+  slug               String         @unique
+  sku                String?        @unique
+  categoryId         String
+  category           Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brandId            String?
+  brand              Brand?         @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  description        String?
+  shortDescription   String?
+  price              Float?
+  unit               String         @default("un") // m², un, caixa, pacote, conjunto
+  isPerSquareMeter   Boolean        @default(false)
+  isAvailable        Boolean        @default(true)
+  isFeatured         Boolean        @default(false)
+  isActive           Boolean        @default(true)
+  dimensions         String?
+  tileLengthMeters   Float?
+  tileWidthMeters    Float?
+  tileAreaSquareMeters Float?
+  technicalSpecs     String?        // JSON string or Markdown
+  stockQuantity      Int?
+  images             ProductImage[]
+  projectProducts    ProjectProduct[]
+  quoteItems         QuoteItem[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+model ProductImage {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  imageUrl   String
+  isPrimary  Boolean  @default(false)
+  orderIndex Int      @default(0)
+  altText    String?
+  createdAt  DateTime @default(now())
+}
+
+model Quote {
+  id               String            @id @default(cuid())
+  referenceCode    String            @unique // e.g., ATL-2026-8942
+  customerName     String
+  customerEmail    String
+  customerPhone    String
+  customerWhatsapp String?
+  companyName      String?
+  projectType      String?           // Residencial, Comercial, Industrial, Reabilitação
+  location         String?
+  notes            String?
+  status           String            @default("NOVO") // NOVO, EM_ANALISE, RESPONDIDO, CONCLUIDO, CANCELADO
+  estimatedTotal   Float?            @default(0)
+  items            QuoteItem[]
+  attachments      QuoteAttachment[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model QuoteItem {
+  id               String   @id @default(cuid())
+  quoteId          String
+  quote            Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId        String?
+  product          Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName      String
+  quantity         Float
+  unit             String   @default("un")
+  calculatedArea   Float?   // Para tijoleiras / porcelanatos
+  wastePercentage  Float?   @default(10)
+  unitPrice        Float?
+  subtotal         Float?
+  createdAt        DateTime @default(now())
+}
+
+model QuoteAttachment {
+  id           String   @id @default(cuid())
+  quoteId      String
+  quote        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  fileUrl      String
+  fileName     String
+  fileType     String
+  fileSize     Int
+  createdAt    DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  location    String?
+  category    String?  // Residencial, Comercial, Hotelaria, Público
+  date        String?
+  description String?
+  coverImage  String?
+  gallery     String?  // JSON string of images
+  isFeatured  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  images      ProjectImage[]
+  products    ProjectProduct[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ProjectImage {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  imageUrl   String
+  isPrimary  Boolean  @default(false)
+  orderIndex Int      @default(0)
+  altText    String?
+  createdAt  DateTime @default(now())
+}
+
+model ProjectProduct {
+  projectId String
+  productId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, productId])
+}
+
+model Solution {
+  id               String   @id @default(cuid())
+  title            String
+  slug             String   @unique
+  icon             String?
+  shortDescription String?
+  content          String?
+  coverImage       String?
+  orderIndex       Int      @default(0)
+  isFeatured       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Setting {
+  id                 String   @id @default("singleton")
+  companyName        String   @default("Atlas Materials")
+  whatsappNumber     String   @default("258874438819")
+  contactEmail       String   @default("comercial@atlasmaterials.com")
+  contactPhone       String   @default("+258 87 443 8819")
+  address            String   @default("Maputo, Moçambique")
+  calculatorDefaults String?
+  updatedAt          DateTime @updatedAt
+}
+
+
+model SiteVisit {
+  id        String   @id @default(cuid())
+  path      String?
+  createdAt DateTime @default(now())
+}
